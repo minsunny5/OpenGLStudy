@@ -23,6 +23,7 @@ const char* fragmentShaderSource = "#version 330 core\n"
 "   FragColor = vec4(1.0f, 0.5f, 0.2f, 1.0f);\n"//주황색
 "}\n\0";
 
+
 int main()
 {
 	//Initialize glfw
@@ -87,6 +88,7 @@ int main()
 		std::cout << "ERROR::SHADER::FRAGMENT::COMPILATION_FAILED\n" << infoLog << std::endl;
 	}
 
+
 	/* 셰이더 링킹 단계 */
 	//만약 vertex shader의 output이랑 fragment shader의 input이 안맞으면 링킹 에러가 남.
 	unsigned int shaderProgram;
@@ -94,7 +96,6 @@ int main()
 	glAttachShader(shaderProgram, vertexShader);
 	glAttachShader(shaderProgram, fragmentShader);
 	glLinkProgram(shaderProgram);
-
 	//링크 잘됐나 확인하기
 	glGetProgramiv(shaderProgram, GL_LINK_STATUS, &success);
 	if (!success)
@@ -102,6 +103,7 @@ int main()
 		glGetProgramInfoLog(shaderProgram, 512, NULL, infoLog);
 		std::cout << "ERROR::SHADER::PROGRAM::LINKING_FAILED\n" << infoLog << std::endl;
 	}
+	
 
 	//이제 셰이더 오브젝트들은 필요없으니 해제
 	glDeleteShader(vertexShader);
@@ -114,30 +116,31 @@ int main()
 	// ------------------------------------------------------------------
 	// set up vertex data (and buffer(s)) and configure vertex attributes
 	// ------------------------------------------------------------------
-	//보통 input vertex가 이렇게 처음부터 NDC로 변환되어있지는 않아서 그런것들은 vertex 셰이더에서 transform 해주지만
-	//연습이니까 NDC로 준비해준다.
 	float vertices[] = {
-	-0.5f, -0.5f, 0.0f,
-	 0.5f, -0.5f, 0.0f,
-	 0.0f,  0.5f, 0.0f
+	 0.5f,  0.5f, 0.0f,  // top right
+	 0.5f, -0.5f, 0.0f,  // bottom right
+	-0.5f, -0.5f, 0.0f,  // bottom left
+	-0.5f,  0.5f, 0.0f   // top left 
+	};
+	unsigned int indices[] = {  // note that we start from 0!
+		0, 1, 3,   // first triangle
+		1, 2, 3    // second triangle
 	};
 	/* 버텍스 버퍼 오브젝트 만들기 */
 	//openGL의 다른 오브젝트들 처럼 VBO도 오브젝트니까 고유 ID를 받아야한다. -> glGenBuffer로 겟
-	unsigned int VBO, VAO;
+	unsigned int VBO, VAO, EBO;
 	glGenVertexArrays(1, &VAO);
 	glGenBuffers(1, &VBO);
+	glGenBuffers(1, &EBO);
 
-	//1. VAO를 바인드
 	glBindVertexArray(VAO);
-	//2. openGL이 사용할 수 있게 vertex array를 버퍼에 넣어준다.
-	//새로 만든 버퍼를 GL_ARRAY_BUFFER 라는 버텍스 버퍼 오브젝트 전용 버퍼 타입에 바인딩 한다.
+
 	glBindBuffer(GL_ARRAY_BUFFER, VBO);
-	//vertices 데이터를 버퍼에 넣는다.
 	glBufferData(GL_ARRAY_BUFFER, sizeof(vertices), vertices, GL_STATIC_DRAW);
-	//마지막 인자 종류 
-	//GL_STREAM_DRAW: the data is set only once and used by the GPU at most a few times.
-	//GL_STATIC_DRAW: the data is set only once and used many times.
-	//GL_DYNAMIC_DRAW: the data is changed a lot and used many times.
+	
+	glBindBuffer(GL_ELEMENT_ARRAY_BUFFER, EBO);
+	glBufferData(GL_ELEMENT_ARRAY_BUFFER, sizeof(indices), indices, GL_STATIC_DRAW);
+
 
 	//3.vertex attribute을 설정하자.
 	//vertex data를 이렇게 해석해라 하고 알려주는 부분
@@ -157,7 +160,9 @@ int main()
 	// VAOs requires a call to glBindVertexArray anyways so we generally don't unbind VAOs (nor VBOs) when it's not directly necessary.
 	glBindVertexArray(0);
 
-
+	// uncomment this call to draw in wireframe polygons.
+	//glPolygonMode(GL_FRONT_AND_BACK, GL_LINE);
+	
 	//Render Loop (루프 한번 = 하나의 프레임)
 	while (!glfwWindowShouldClose(window))
 	{
@@ -168,10 +173,11 @@ int main()
 		glClearColor(0.2f, 0.3f, 0.3f, 1.0f);//버퍼 리셋할 때는 이 컬러로 바꾼다.(state-setting function)
 		glClear(GL_COLOR_BUFFER_BIT);//버퍼를 리셋한다.(state-using function) GL_DEPTH_BUFFER_BIT,GL_STENCIL_BUFFER_BIT도 CLEAR가능
 
-		//삼각형 그리기
+		//사각형 그리기
 		glUseProgram(shaderProgram);//만든 프로그램 활성화 시키기
 		glBindVertexArray(VAO);//솔직히 지금 그리는 오브젝트가 하나밖에 없는데 이걸 계속 바인딩해줄 필요는 없지만 통일성을 위해 그냥 해준다.
-		glDrawArrays(GL_TRIANGLES, 0, 3);//현재 활성화된 셰이더로 GL_TRIANGLES를 그림. 인덱스는 0부터 시작할거고 삼각형이라 vertex 3개 그릴거임.
+		glDrawElements(GL_TRIANGLES, 6, GL_UNSIGNED_INT, 0);
+		//2번째 인자: indices가 6개라서
 		//glBindVertexArray(0); //매번 unbind 해줄 필요는 없다.
 
 		glfwSwapBuffers(window);//백버퍼를 모니터에 출력
@@ -181,6 +187,7 @@ int main()
 	//메모리 해제
 	glDeleteVertexArrays(1, &VAO);
 	glDeleteBuffers(1, &VBO);
+	glDeleteBuffers(1, &EBO);
 	glDeleteProgram(shaderProgram);
 	//glfw 리소스 메모리 해제
 	glfwTerminate();
