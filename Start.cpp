@@ -20,7 +20,13 @@ const char* fragmentShaderSource = "#version 330 core\n"
 "out vec4 FragColor;\n"
 "void main()\n"
 "{\n"
-"   FragColor = vec4(1.0f, 0.5f, 0.2f, 1.0f);\n"//주황색
+"   FragColor = vec4(1.0f, 1.5f, 0.2f, 1.0f);\n"//주황색
+"}\n\0";
+const char* fragmentShaderSource_yellow = "#version 330 core\n"
+"out vec4 FragColor;\n"
+"void main()\n"
+"{\n"
+"   FragColor = vec4(1.0f, 1.0f, 0.0f, 1.0f);\n"//노란색
 "}\n\0";
 
 
@@ -88,6 +94,20 @@ int main()
 		std::cout << "ERROR::SHADER::FRAGMENT::COMPILATION_FAILED\n" << infoLog << std::endl;
 	}
 
+	/* 프래그먼트 셰이더 오브젝트 만들기 */
+	unsigned int fragmentShader_yellow;
+	fragmentShader_yellow = glCreateShader(GL_FRAGMENT_SHADER);//셰이더 오브젝트 생성
+	glShaderSource(fragmentShader_yellow, 1, &fragmentShaderSource, NULL);//오브젝트에 셰이더 코드 붙여주기
+	glCompileShader(fragmentShader_yellow);
+
+	//컴파일 잘됐나 확인하기
+	glGetShaderiv(fragmentShader_yellow, GL_COMPILE_STATUS, &success);//컴파일 성공했는지 확인
+	if (!success)
+	{
+		glGetShaderInfoLog(fragmentShader_yellow, 512, NULL, infoLog);
+		std::cout << "ERROR::SHADER::FRAGMENT::COMPILATION_FAILED\n" << infoLog << std::endl;
+	}
+
 
 	/* 셰이더 링킹 단계 */
 	//만약 vertex shader의 output이랑 fragment shader의 input이 안맞으면 링킹 에러가 남.
@@ -101,6 +121,19 @@ int main()
 	if (!success)
 	{
 		glGetProgramInfoLog(shaderProgram, 512, NULL, infoLog);
+		std::cout << "ERROR::SHADER::PROGRAM::LINKING_FAILED\n" << infoLog << std::endl;
+	}
+
+	unsigned int shaderProgram_yellow;
+	shaderProgram_yellow = glCreateProgram();//프로그램 오브젝트 생성
+	glAttachShader(shaderProgram_yellow, vertexShader);
+	glAttachShader(shaderProgram_yellow, fragmentShader_yellow);
+	glLinkProgram(shaderProgram_yellow);
+	//링크 잘됐나 확인하기
+	glGetProgramiv(shaderProgram_yellow, GL_LINK_STATUS, &success);
+	if (!success)
+	{
+		glGetProgramInfoLog(shaderProgram_yellow, 512, NULL, infoLog);
 		std::cout << "ERROR::SHADER::PROGRAM::LINKING_FAILED\n" << infoLog << std::endl;
 	}
 	
@@ -117,29 +150,27 @@ int main()
 	// set up vertex data (and buffer(s)) and configure vertex attributes
 	// ------------------------------------------------------------------
 	float vertices[] = {
-	 0.5f,  0.5f, 0.0f,  // top right
-	 0.5f, -0.5f, 0.0f,  // bottom right
-	-0.5f, -0.5f, 0.0f,  // bottom left
-	-0.5f,  0.5f, 0.0f   // top left 
+		// first triangle
+		-1.0f, -0.5f, 0.0f,  // left 
+		 0.0f, -0.5f, 0.0f,  // right
+		-0.5f, 0.5f, 0.0f,  // top 
+		// second triangle
+		 0.0f, -0.5f, 0.0f,  // left
+		 0.1f, -0.5f, 0.0f,  // right
+		 0.5f, 0.5f, 0.0f   // top 
 	};
-	unsigned int indices[] = {  // note that we start from 0!
-		0, 1, 3,   // first triangle
-		1, 2, 3    // second triangle
-	};
+	
 	/* 버텍스 버퍼 오브젝트 만들기 */
 	//openGL의 다른 오브젝트들 처럼 VBO도 오브젝트니까 고유 ID를 받아야한다. -> glGenBuffer로 겟
-	unsigned int VBO, VAO, EBO;
+	unsigned int VBO, VAO;
 	glGenVertexArrays(1, &VAO);
 	glGenBuffers(1, &VBO);
-	glGenBuffers(1, &EBO);
 
 	glBindVertexArray(VAO);
 
 	glBindBuffer(GL_ARRAY_BUFFER, VBO);
 	glBufferData(GL_ARRAY_BUFFER, sizeof(vertices), vertices, GL_STATIC_DRAW);
 	
-	glBindBuffer(GL_ELEMENT_ARRAY_BUFFER, EBO);
-	glBufferData(GL_ELEMENT_ARRAY_BUFFER, sizeof(indices), indices, GL_STATIC_DRAW);
 
 
 	//3.vertex attribute을 설정하자.
@@ -174,9 +205,9 @@ int main()
 		glClear(GL_COLOR_BUFFER_BIT);//버퍼를 리셋한다.(state-using function) GL_DEPTH_BUFFER_BIT,GL_STENCIL_BUFFER_BIT도 CLEAR가능
 
 		//사각형 그리기
-		glUseProgram(shaderProgram);//만든 프로그램 활성화 시키기
+		glUseProgram(shaderProgram_yellow);//만든 프로그램 활성화 시키기
 		glBindVertexArray(VAO);//솔직히 지금 그리는 오브젝트가 하나밖에 없는데 이걸 계속 바인딩해줄 필요는 없지만 통일성을 위해 그냥 해준다.
-		glDrawElements(GL_TRIANGLES, 6, GL_UNSIGNED_INT, 0);
+		glDrawArrays(GL_TRIANGLES, 0, 6);
 		//2번째 인자: indices가 6개라서
 		//glBindVertexArray(0); //매번 unbind 해줄 필요는 없다.
 
@@ -187,7 +218,6 @@ int main()
 	//메모리 해제
 	glDeleteVertexArrays(1, &VAO);
 	glDeleteBuffers(1, &VBO);
-	glDeleteBuffers(1, &EBO);
 	glDeleteProgram(shaderProgram);
 	//glfw 리소스 메모리 해제
 	glfwTerminate();
