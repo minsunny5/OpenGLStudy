@@ -12,21 +12,28 @@ const unsigned int SCR_HEIGHT = 600;
 
 const char* vertexShaderSource = "#version 330 core\n"//openGL 3.3버전에 대응
 "layout (location = 0) in vec3 aPos;\n"//버텍스 쉐이더 내의 모든 input vertex attributes을 선언
+"out vec4 vertexColor;\n"
 "void main()\n"
 "{\n"
-"   gl_Position = vec4(aPos.x, aPos.y, aPos.z, 1.0);\n"//버텍스 쉐이더의 Output = gl_Position
+"   gl_Position = vec4(aPos, 1.0);\n"//버텍스 쉐이더의 Output = gl_Position
+"	vertexColor = vec4(0.5, 0.0, 0.0, 1.0);\n"
 "}\0";
-const char* fragmentShaderSource = "#version 330 core\n"
+
+//vertex color를 그대로 출력하는 frag셰이더
+const char* fragmentShaderSource = "#version 330 core\n" 
 "out vec4 FragColor;\n"
+"in vec4 vertexColor;\n"
 "void main()\n"
 "{\n"
-"   FragColor = vec4(1.0f, 0.5f, 0.2f, 1.0f);\n"//주황색
+"   FragColor = vertexColor;\n"
 "}\n\0";
-const char* fragmentShaderSource_yellow = "#version 330 core\n"
+//코드에서 가져온 컬러값을 출력하는 frag 셰이더
+const char* fragmentShaderSource_time = "#version 330 core\n"
 "out vec4 FragColor;\n"
+"uniform vec4 ourColor;\n"
 "void main()\n"
 "{\n"
-"   FragColor = vec4(1.0f, 1.0f, 0.0f, 1.0f);\n"//노란색
+"   FragColor = ourColor;\n"
 "}\n\0";
 
 
@@ -92,7 +99,7 @@ int main()
 	/* 노란색 프래그먼트 셰이더 오브젝트 만들기 */
 	unsigned int fragmentShader_yellow;
 	fragmentShader_yellow = glCreateShader(GL_FRAGMENT_SHADER);//셰이더 오브젝트 생성
-	glShaderSource(fragmentShader_yellow, 1, &fragmentShaderSource_yellow, NULL);//오브젝트에 셰이더 코드 붙여주기
+	glShaderSource(fragmentShader_yellow, 1, &fragmentShaderSource_time, NULL);//오브젝트에 셰이더 코드 붙여주기
 	glCompileShader(fragmentShader_yellow);
 	glGetShaderiv(fragmentShader_yellow, GL_COMPILE_STATUS, &success);//컴파일 성공했는지 확인
 	if (!success)
@@ -117,16 +124,16 @@ int main()
 		std::cout << "ERROR::SHADER::PROGRAM::LINKING_FAILED\n" << infoLog << std::endl;
 	}
 
-	unsigned int shaderProgram_yellow;
-	shaderProgram_yellow = glCreateProgram();//프로그램 오브젝트 생성
-	glAttachShader(shaderProgram_yellow, vertexShader);
-	glAttachShader(shaderProgram_yellow, fragmentShader_yellow);
-	glLinkProgram(shaderProgram_yellow);
+	unsigned int shaderProgram_time;
+	shaderProgram_time = glCreateProgram();//프로그램 오브젝트 생성
+	glAttachShader(shaderProgram_time, vertexShader);
+	glAttachShader(shaderProgram_time, fragmentShader_yellow);
+	glLinkProgram(shaderProgram_time);
 	//링크 잘됐나 확인하기
-	glGetProgramiv(shaderProgram_yellow, GL_LINK_STATUS, &success);
+	glGetProgramiv(shaderProgram_time, GL_LINK_STATUS, &success);
 	if (!success)
 	{
-		glGetProgramInfoLog(shaderProgram_yellow, 512, NULL, infoLog);
+		glGetProgramInfoLog(shaderProgram_time, 512, NULL, infoLog);
 		std::cout << "ERROR::SHADER::PROGRAM::LINKING_FAILED\n" << infoLog << std::endl;
 	}
 	
@@ -174,7 +181,7 @@ int main()
 	glBindBuffer(GL_ARRAY_BUFFER, VBOs[1]);
 	glBufferData(GL_ARRAY_BUFFER, sizeof(vertices2), vertices2, GL_STATIC_DRAW);
 	glVertexAttribPointer(0, 3, GL_FLOAT, GL_FALSE, 3 * sizeof(float), (void*)0);
-	glEnableVertexAttribArray(0);
+	glEnableVertexAttribArray(0);//attrib 세팅 끝낫다!
 
 	// uncomment this call to draw in wireframe polygons.
 	//glPolygonMode(GL_FRONT_AND_BACK, GL_LINE);
@@ -189,12 +196,19 @@ int main()
 		glClearColor(0.2f, 0.3f, 0.3f, 1.0f);//버퍼 리셋할 때는 이 컬러로 바꾼다.(state-setting function)
 		glClear(GL_COLOR_BUFFER_BIT);//버퍼를 리셋한다.(state-using function) GL_DEPTH_BUFFER_BIT,GL_STENCIL_BUFFER_BIT도 CLEAR가능
 
-		//삼각형 2개 그리기
 		glUseProgram(shaderProgram);//처음에 만든 프로그램 활성화 시키기
 		glBindVertexArray(VAOs[0]);//먼저 첫번째 VAO를 그리겠다고 세팅해줌.
 		glDrawArrays(GL_TRIANGLES, 0, 3);
+
+		glUseProgram(shaderProgram_time);// 프로그램 활성화 시키기
+
+		//uniform 컬러 업데이트	
+		float timeValue = glfwGetTime();
+		float greenValue = sin(timeValue) / 2.0f + 0.5f;
+		int vertexColorLocation = glGetUniformLocation(shaderProgram_time, "ourColor");//ourColor라는 이름의 uniform값의 위치를 찾는다.
+		glUniform4f(vertexColorLocation, 0.0f, greenValue, 0.0f, 1.0f);
 		
-		glUseProgram(shaderProgram_yellow);//yellow 버전 프로그램 활성화 시키기
+		//이제 삼각형 그리기
 		glBindVertexArray(VAOs[1]);//이제 두번째 VAO를 그리겠다고 세팅해줌.
 		glDrawArrays(GL_TRIANGLES, 0, 3);
 
@@ -206,7 +220,7 @@ int main()
 	glDeleteVertexArrays(2, VAOs);
 	glDeleteBuffers(2, VBOs);
 	glDeleteProgram(shaderProgram);
-	glDeleteProgram(shaderProgram_yellow);
+	glDeleteProgram(shaderProgram_time);
 	//glfw 리소스 메모리 해제
 	glfwTerminate();
 
