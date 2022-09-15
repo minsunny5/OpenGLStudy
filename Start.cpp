@@ -1,6 +1,10 @@
 #include <glad/glad.h>
 #include <GLFW/glfw3.h>
+#include "stb_image.h"
+
 #include <iostream>
+
+#include "shader.h"
 using namespace std;
 
 void framebuffer_size_callback(GLFWwindow* window, int w, int h);
@@ -9,32 +13,6 @@ void processInput(GLFWwindow* window);
 // settings
 const unsigned int SCR_WIDTH = 800;
 const unsigned int SCR_HEIGHT = 600;
-
-const char* vertexShaderSource = "#version 330 core\n"//openGL 3.3버전에 대응
-"layout (location = 0) in vec3 aPos;\n"//버텍스 쉐이더 내의 모든 input vertex attributes을 선언
-"out vec4 vertexColor;\n"
-"void main()\n"
-"{\n"
-"   gl_Position = vec4(aPos, 1.0);\n"//버텍스 쉐이더의 Output = gl_Position
-"	vertexColor = vec4(0.5, 0.0, 0.0, 1.0);\n"
-"}\0";
-
-//vertex color를 그대로 출력하는 frag셰이더
-const char* fragmentShaderSource = "#version 330 core\n" 
-"out vec4 FragColor;\n"
-"in vec4 vertexColor;\n"
-"void main()\n"
-"{\n"
-"   FragColor = vertexColor;\n"
-"}\n\0";
-//코드에서 가져온 컬러값을 출력하는 frag 셰이더
-const char* fragmentShaderSource_time = "#version 330 core\n"
-"out vec4 FragColor;\n"
-"uniform vec4 ourColor;\n"
-"void main()\n"
-"{\n"
-"   FragColor = ourColor;\n"
-"}\n\0";
 
 
 int main()
@@ -70,78 +48,7 @@ int main()
 	// ------------------------------------
 	// build and compile our shader program
 	// ------------------------------------
-	/* 버텍스 셰이더 오브젝트 만들기 */
-	unsigned int vertexShader;
-	vertexShader = glCreateShader(GL_VERTEX_SHADER);//vertexShader -> 이 ID에 VertexShader를 붙이겠다!
-	glShaderSource(vertexShader, 1, &vertexShaderSource, NULL);	//셰이더 코드 붙여주기
-	glCompileShader(vertexShader);
-	int success;
-	char infoLog[512];
-	glGetShaderiv(vertexShader, GL_COMPILE_STATUS, &success);//컴파일 성공했는지 확인
-	if (!success)
-	{
-		glGetShaderInfoLog(vertexShader, 512, NULL, infoLog);
-		std::cout << "ERROR::SHADER::VERTEX::COMPILATION_FAILED\n" << infoLog << std::endl;
-	}
-
-	/* 프래그먼트 셰이더 오브젝트 만들기 */
-	unsigned int fragmentShader;
-	fragmentShader = glCreateShader(GL_FRAGMENT_SHADER);//셰이더 오브젝트 생성
-	glShaderSource(fragmentShader, 1, &fragmentShaderSource, NULL);//오브젝트에 셰이더 코드 붙여주기
-	glCompileShader(fragmentShader);
-	glGetShaderiv(fragmentShader, GL_COMPILE_STATUS, &success);//컴파일 성공했는지 확인
-	if (!success)
-	{
-		glGetShaderInfoLog(fragmentShader, 512, NULL, infoLog);
-		std::cout << "ERROR::SHADER::FRAGMENT::COMPILATION_FAILED\n" << infoLog << std::endl;
-	}
-
-	/* 노란색 프래그먼트 셰이더 오브젝트 만들기 */
-	unsigned int fragmentShader_yellow;
-	fragmentShader_yellow = glCreateShader(GL_FRAGMENT_SHADER);//셰이더 오브젝트 생성
-	glShaderSource(fragmentShader_yellow, 1, &fragmentShaderSource_time, NULL);//오브젝트에 셰이더 코드 붙여주기
-	glCompileShader(fragmentShader_yellow);
-	glGetShaderiv(fragmentShader_yellow, GL_COMPILE_STATUS, &success);//컴파일 성공했는지 확인
-	if (!success)
-	{
-		glGetShaderInfoLog(fragmentShader_yellow, 512, NULL, infoLog);
-		std::cout << "ERROR::SHADER::FRAGMENT::COMPILATION_FAILED\n" << infoLog << std::endl;
-	}
-
-
-	/* 셰이더 링킹 단계 */
-	//만약 vertex shader의 output이랑 fragment shader의 input이 안맞으면 링킹 에러가 남.
-	unsigned int shaderProgram;
-	shaderProgram = glCreateProgram();//프로그램 오브젝트 생성
-	glAttachShader(shaderProgram, vertexShader);
-	glAttachShader(shaderProgram, fragmentShader);
-	glLinkProgram(shaderProgram);
-	//링크 잘됐나 확인하기
-	glGetProgramiv(shaderProgram, GL_LINK_STATUS, &success);
-	if (!success)
-	{
-		glGetProgramInfoLog(shaderProgram, 512, NULL, infoLog);
-		std::cout << "ERROR::SHADER::PROGRAM::LINKING_FAILED\n" << infoLog << std::endl;
-	}
-
-	unsigned int shaderProgram_time;
-	shaderProgram_time = glCreateProgram();//프로그램 오브젝트 생성
-	glAttachShader(shaderProgram_time, vertexShader);
-	glAttachShader(shaderProgram_time, fragmentShader_yellow);
-	glLinkProgram(shaderProgram_time);
-	//링크 잘됐나 확인하기
-	glGetProgramiv(shaderProgram_time, GL_LINK_STATUS, &success);
-	if (!success)
-	{
-		glGetProgramInfoLog(shaderProgram_time, 512, NULL, infoLog);
-		std::cout << "ERROR::SHADER::PROGRAM::LINKING_FAILED\n" << infoLog << std::endl;
-	}
-	
-
-	//링크 끝났으면 이제 셰이더 오브젝트들은 필요없으니 해제
-	glDeleteShader(vertexShader);
-	glDeleteShader(fragmentShader);
-	glDeleteShader(fragmentShader_yellow);
+	Shader ourShader("texture.vs", "texture.fs");
 
 
 	//ViewPort setting (1st,2nd) arguments means lower left corner of the window. (-1 to 1) 
@@ -150,42 +57,98 @@ int main()
 	// ------------------------------------------------------------------
 	// set up vertex data (and buffer(s)) and configure vertex attributes
 	// ------------------------------------------------------------------
-	float vertices1[] = {
-		// first triangle
-		-1.0f, -0.5f, 0.0f,  // left 
-		 0.0f, -0.5f, 0.0f,  // right
-		-0.5f, 0.5f, 0.0f,  // top 
+	float vertices[] = {
+		// positions          // colors           // texture coords
+		 0.5f,  0.5f, 0.0f,   1.0f, 0.0f, 0.0f,   1.0f, 1.0f, // top right
+		 0.5f, -0.5f, 0.0f,   0.0f, 1.0f, 0.0f,   1.0f, 0.0f, // bottom right
+		-0.5f, -0.5f, 0.0f,   0.0f, 0.0f, 1.0f,   0.0f, 0.0f, // bottom left
+		-0.5f,  0.5f, 0.0f,   1.0f, 1.0f, 0.0f,   0.0f, 1.0f  // top left 
 	};
-	float vertices2[] = {
-		// second triangle
-		 0.0f, -0.5f, 0.0f,  // left
-		 1.0f, -0.5f, 0.0f,  // right
-		 0.5f, 0.5f, 0.0f   // top 
+	unsigned int indices[] = {
+		0, 1, 3, // first triangle
+		1, 2, 3  // second triangle
 	};
-	
-	/* 버텍스 버퍼 오브젝트 만들기 */
-	//openGL의 다른 오브젝트들 처럼 VBO도 오브젝트니까 고유 ID를 받아야한다. -> glGenBuffer로 겟
-	unsigned int VBOs[2], VAOs[2];
-	glGenVertexArrays(2, VAOs);
-	glGenBuffers(2, VBOs);
+	unsigned int VBO, VAO, EBO;
+	glGenVertexArrays(1, &VAO);
+	glGenBuffers(1, &VBO);
+	glGenBuffers(1, &EBO);
 
-	//첫번째 삼각형 세팅
-	glBindVertexArray(VAOs[0]);
-	glBindBuffer(GL_ARRAY_BUFFER, VBOs[0]);
-	glBufferData(GL_ARRAY_BUFFER, sizeof(vertices1), vertices1, GL_STATIC_DRAW);
-	glVertexAttribPointer(0, 3, GL_FLOAT, GL_FALSE, 3 * sizeof(float), (void*)0);
+	glBindVertexArray(VAO);
+
+	glBindBuffer(GL_ARRAY_BUFFER, VBO);
+	glBufferData(GL_ARRAY_BUFFER, sizeof(vertices), vertices, GL_STATIC_DRAW);
+
+	glBindBuffer(GL_ELEMENT_ARRAY_BUFFER, EBO);
+	glBufferData(GL_ELEMENT_ARRAY_BUFFER, sizeof(indices), indices, GL_STATIC_DRAW);
+
+	// position attribute
+	glVertexAttribPointer(0, 3, GL_FLOAT, GL_FALSE, 8 * sizeof(float), (void*)0);
 	glEnableVertexAttribArray(0);
+	// color attribute
+	glVertexAttribPointer(1, 3, GL_FLOAT, GL_FALSE, 8 * sizeof(float), (void*)(3 * sizeof(float)));
+	glEnableVertexAttribArray(1);
+	// texture coord attribute
+	glVertexAttribPointer(2, 2, GL_FLOAT, GL_FALSE, 8 * sizeof(float), (void*)(6 * sizeof(float)));
+	glEnableVertexAttribArray(2);
 
-	//두번째 삼각형 세팅
-	glBindVertexArray(VAOs[1]);//glBindVertexArray에 다른걸 바인딩하면 건드릴 VAO대상이 바뀜.
-	glBindBuffer(GL_ARRAY_BUFFER, VBOs[1]);
-	glBufferData(GL_ARRAY_BUFFER, sizeof(vertices2), vertices2, GL_STATIC_DRAW);
-	glVertexAttribPointer(0, 3, GL_FLOAT, GL_FALSE, 3 * sizeof(float), (void*)0);
-	glEnableVertexAttribArray(0);//attrib 세팅 끝낫다!
+	// load and create a texture 
+	// -------------------------
+	unsigned int texture1, texture2;
+	glGenTextures(1, &texture1);
+	glBindTexture(GL_TEXTURE_2D, texture1); // all upcoming GL_TEXTURE_2D operations now have effect on this texture object
+	// set the texture wrapping parameters
+	glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_WRAP_S, GL_REPEAT);	// set texture wrapping to GL_REPEAT (default wrapping method)
+	glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_WRAP_T, GL_REPEAT);
+	// set texture filtering parameters
+	glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_MIN_FILTER, GL_LINEAR_MIPMAP_LINEAR);
+	glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_MAG_FILTER, GL_LINEAR);
+	// load image, create texture and generate mipmaps
+	int width, height, nrChannels;
+	stbi_set_flip_vertically_on_load(true);// tell stb_image.h to flip loaded texture's on the y-axis.
+	unsigned char* data = stbi_load("container.jpg", &width, &height, &nrChannels, 0);
+	if (data)
+	{
+		glTexImage2D(GL_TEXTURE_2D, 0, GL_RGB, width, height, 0, GL_RGB, GL_UNSIGNED_BYTE, data);//0레벨 텍스쳐로 만들기
+		glGenerateMipmap(GL_TEXTURE_2D);//0레벨 텍스쳐 기반으로 밉맵들 자동 생성하기
+	}
+	else
+	{
+		std::cout << "Failed to load texture" << std::endl;
+	}
+	stbi_image_free(data);
 
-	// uncomment this call to draw in wireframe polygons.
-	//glPolygonMode(GL_FRONT_AND_BACK, GL_LINE);
-	
+	// texture 2
+	// ---------
+	glGenTextures(1, &texture2);
+	glBindTexture(GL_TEXTURE_2D, texture2);
+	// set the texture wrapping parameters
+	glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_WRAP_S, GL_REPEAT);	// set texture wrapping to GL_REPEAT (default wrapping method)
+	glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_WRAP_T, GL_REPEAT);
+	// set texture filtering parameters
+	glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_MIN_FILTER, GL_LINEAR);
+	glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_MAG_FILTER, GL_LINEAR);
+	// load image, create texture and generate mipmaps
+	data = stbi_load("awesomeface.png", &width, &height, &nrChannels, 0);
+	if (data)
+	{
+		// note that the awesomeface.png has transparency and thus an alpha channel, so make sure to tell OpenGL the data type is of GL_RGBA
+		glTexImage2D(GL_TEXTURE_2D, 0, GL_RGBA, width, height, 0, GL_RGBA, GL_UNSIGNED_BYTE, data);
+		glGenerateMipmap(GL_TEXTURE_2D);
+	}
+	else
+	{
+		std::cout << "Failed to load texture" << std::endl;
+	}
+	stbi_image_free(data);
+
+	// tell opengl for each sampler to which texture unit it belongs to (only has to be done once)
+	// -------------------------------------------------------------------------------------------
+	ourShader.use(); // don't forget to activate/use the shader before setting uniforms!
+	// either set it manually like so:
+	glUniform1i(glGetUniformLocation(ourShader.ID, "texture1"), 0);
+	// or set it via the texture class
+	ourShader.setInt("texture2", 1);
+
 	//Render Loop (루프 한번 = 하나의 프레임)
 	while (!glfwWindowShouldClose(window))
 	{
@@ -196,31 +159,27 @@ int main()
 		glClearColor(0.2f, 0.3f, 0.3f, 1.0f);//버퍼 리셋할 때는 이 컬러로 바꾼다.(state-setting function)
 		glClear(GL_COLOR_BUFFER_BIT);//버퍼를 리셋한다.(state-using function) GL_DEPTH_BUFFER_BIT,GL_STENCIL_BUFFER_BIT도 CLEAR가능
 
-		glUseProgram(shaderProgram);//처음에 만든 프로그램 활성화 시키기
-		glBindVertexArray(VAOs[0]);//먼저 첫번째 VAO를 그리겠다고 세팅해줌.
-		glDrawArrays(GL_TRIANGLES, 0, 3);
+		// fragment shader의 샘플러2d변수로 texture를 보내준다.
+		// bind textures on corresponding texture units
+		glActiveTexture(GL_TEXTURE0);
+		glBindTexture(GL_TEXTURE_2D, texture1);
+		glActiveTexture(GL_TEXTURE1);
+		glBindTexture(GL_TEXTURE_2D, texture2);
 
-		glUseProgram(shaderProgram_time);// 프로그램 활성화 시키기
+		//render
+		ourShader.use();
+		glBindVertexArray(VAO);//먼저 첫번째 VAO를 그리겠다고 세팅해줌.
+		glDrawElements(GL_TRIANGLES, 6, GL_UNSIGNED_INT, 0);
 
-		//uniform 컬러 업데이트	
-		float timeValue = glfwGetTime();
-		float greenValue = sin(timeValue) / 2.0f + 0.5f;
-		int vertexColorLocation = glGetUniformLocation(shaderProgram_time, "ourColor");//ourColor라는 이름의 uniform값의 위치를 찾는다.
-		glUniform4f(vertexColorLocation, 0.0f, greenValue, 0.0f, 1.0f);
 		
-		//이제 삼각형 그리기
-		glBindVertexArray(VAOs[1]);//이제 두번째 VAO를 그리겠다고 세팅해줌.
-		glDrawArrays(GL_TRIANGLES, 0, 3);
-
 		glfwSwapBuffers(window);//백버퍼를 모니터에 출력
 		glfwPollEvents();//트리거된 이벤트(키보드 인풋이나 마우스 인풋 등)가 있는지 확인
 	}
 
 	//메모리 해제
-	glDeleteVertexArrays(2, VAOs);
-	glDeleteBuffers(2, VBOs);
-	glDeleteProgram(shaderProgram);
-	glDeleteProgram(shaderProgram_time);
+	glDeleteVertexArrays(1, &VAO);
+	glDeleteBuffers(1, &VBO);
+	glDeleteBuffers(1, &EBO);
 	//glfw 리소스 메모리 해제
 	glfwTerminate();
 
