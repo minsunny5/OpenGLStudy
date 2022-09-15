@@ -8,7 +8,8 @@
 using namespace std;
 
 void framebuffer_size_callback(GLFWwindow* window, int w, int h);
-void processInput(GLFWwindow* window);
+void processInput(GLFWwindow* window, float& origin);
+void addValuef(float& origin, float unit);
 
 // settings
 const unsigned int SCR_WIDTH = 800;
@@ -59,10 +60,10 @@ int main()
 	// ------------------------------------------------------------------
 	float vertices[] = {
 		// positions          // colors           // texture coords
-		 0.5f,  0.5f, 0.0f,   1.0f, 0.0f, 0.0f,   0.6f, 0.6f, // top right
-		 0.5f, -0.5f, 0.0f,   0.0f, 1.0f, 0.0f,   0.6f, 0.4f, // bottom right
-		-0.5f, -0.5f, 0.0f,   0.0f, 0.0f, 1.0f,   0.4f, 0.4f, // bottom left
-		-0.5f,  0.5f, 0.0f,   1.0f, 1.0f, 0.0f,   0.4f, 0.6f  // top left 
+		 0.5f,  0.5f, 0.0f,   1.0f, 0.0f, 0.0f,   1.0f, 1.0f, // top right
+		 0.5f, -0.5f, 0.0f,   0.0f, 1.0f, 0.0f,   1.0f, 0.0f, // bottom right
+		-0.5f, -0.5f, 0.0f,   0.0f, 0.0f, 1.0f,   0.0f, 0.0f, // bottom left
+		-0.5f,  0.5f, 0.0f,   1.0f, 1.0f, 0.0f,   0.0f, 1.0f  // top left 
 	};
 	unsigned int indices[] = {
 		0, 1, 3, // first triangle
@@ -141,6 +142,7 @@ int main()
 	}
 	stbi_image_free(data);
 
+	float mixRatiobyKey = 0.0; //default mixRatio
 	// tell opengl for each sampler to which texture unit it belongs to (only has to be done once)
 	// -------------------------------------------------------------------------------------------
 	ourShader.use(); // don't forget to activate/use the shader before setting uniforms!
@@ -153,7 +155,7 @@ int main()
 	while (!glfwWindowShouldClose(window))
 	{
 		//keyboard input check
-		processInput(window);
+		processInput(window, mixRatiobyKey);
 
 		//Rendering commands..
 		glClearColor(0.2f, 0.3f, 0.3f, 1.0f);//버퍼 리셋할 때는 이 컬러로 바꾼다.(state-setting function)
@@ -168,6 +170,7 @@ int main()
 
 		//render
 		ourShader.use();
+		ourShader.setFloat("mixRatio", mixRatiobyKey);
 		glBindVertexArray(VAO);//먼저 첫번째 VAO를 그리겠다고 세팅해줌.
 		glDrawElements(GL_TRIANGLES, 6, GL_UNSIGNED_INT, 0);
 
@@ -193,10 +196,23 @@ void framebuffer_size_callback(GLFWwindow* window, int w, int h)
 	glViewport(0, 0, w, h);
 }
 
-void processInput(GLFWwindow* window)
+void processInput(GLFWwindow* window, float& origin)
 {
 	if (glfwGetKey(window, GLFW_KEY_ESCAPE) == GLFW_PRESS)//esc키가 눌렸다면
 	{
 		glfwSetWindowShouldClose(window, true);
 	}
+	if (glfwGetKey(window, GLFW_KEY_UP) == GLFW_PRESS)//방향키 up을 눌렀다면
+	{
+		addValuef(origin, 0.01);
+	}
+	if (glfwGetKey(window, GLFW_KEY_DOWN) == GLFW_PRESS)//방향키 down을 눌렀다면
+	{
+		addValuef(origin, -0.01);
+	}
+}
+
+void addValuef(float& origin, float unit)
+{
+	origin += unit;
 }

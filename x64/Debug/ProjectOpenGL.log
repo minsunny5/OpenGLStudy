@@ -1,2 +1,4 @@
 ﻿  Start.cpp
+D:\OpenGLStudy\ProjectOpenGL\Start.cpp(207,25): warning C4305: '인수': 'double'에서 'float'(으)로 잘립니다.
+D:\OpenGLStudy\ProjectOpenGL\Start.cpp(211,26): warning C4305: '인수': 'double'에서 'float'(으)로 잘립니다.
   ProjectOpenGL.vcxproj -> D:\OpenGLStudy\ProjectOpenGL\x64\Debug\ProjectOpenGL.exe
