@@ -34,7 +34,7 @@
     </ClInclude>
   </ItemGroup>
   <ItemGroup>
-    <None Include="texture.vs">
+    <None Include="transform.vs">
       <Filter>소스 파일</Filter>
     </None>
     <None Include="texture.fs">
