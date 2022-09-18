@@ -184,6 +184,20 @@ int main()
 	glUniform1i(glGetUniformLocation(ourShader.ID, "texture1"), 0);
 	// or set it via the texture class
 	ourShader.setInt("texture2", 1);
+
+	//Cube 들의 위치
+	glm::vec3 cubePositions[] = {
+	glm::vec3(0.0f,  0.0f,  0.0f),
+	glm::vec3(2.0f,  5.0f, -15.0f),
+	glm::vec3(-1.5f, -2.2f, -2.5f),
+	glm::vec3(-3.8f, -2.0f, -12.3f),
+	glm::vec3(2.4f, -0.4f, -3.5f),
+	glm::vec3(-1.7f,  3.0f, -7.5f),
+	glm::vec3(1.3f, -2.0f, -2.5f),
+	glm::vec3(1.5f,  2.0f, -2.5f),
+	glm::vec3(1.5f,  0.2f, -1.5f),
+	glm::vec3(-1.3f,  1.0f, -1.5f)
+	};
 	
 	//Render Loop (루프 한번 = 하나의 프레임)
 	while (!glfwWindowShouldClose(window))
@@ -206,25 +220,29 @@ int main()
 		ourShader.use();
 
 		//Transformation
-		glm::mat4 model = glm::mat4(1.0f);//먼저 초기화
-		model = glm::rotate(model, (float)glfwGetTime() * glm::radians(50.0f), glm::vec3(0.5f, 1.0f, 0.0f));
-
 		glm::mat4 view = glm::mat4(1.0f);
 		view = glm::translate(view, glm::vec3(0.0f, 0.0f, -3.0f));
 
 		glm::mat4 projection = glm::mat4(1.0f);
 		projection = glm::perspective(glm::radians(45.0f), (float)SCR_WIDTH / (float)SCR_HEIGHT, 0.1f, 100.0f);
 
-		unsigned int modelLoc = glGetUniformLocation(ourShader.ID, "model");
-		glUniformMatrix4fv(modelLoc, 1, GL_FALSE, glm::value_ptr(model));
 		unsigned int viewLoc = glGetUniformLocation(ourShader.ID, "view");
 		glUniformMatrix4fv(viewLoc, 1, GL_FALSE, glm::value_ptr(view));
 		unsigned int projectionLoc = glGetUniformLocation(ourShader.ID, "projection");
 		glUniformMatrix4fv(projectionLoc, 1, GL_FALSE, glm::value_ptr(projection));
 
 		glBindVertexArray(VAO);//먼저 첫번째 VAO를 그리겠다고 세팅해줌.
-		glDrawArrays(GL_TRIANGLES, 0, 36);
+		//Cube 10개를 그려보자.
+		for (int i = 0; i < 10; i++)
+		{
+			glm::mat4 model = glm::mat4(1.0f);//먼저 초기화
+			model = glm::translate(model, cubePositions[i]);
+			float angle = 20.0f * i * glfwGetTime();
+			model = glm::rotate(model, glm::radians(angle), glm::vec3(1.0f, 0.3f, 0.5f));
+			ourShader.setMat4("model", model);
 
+			glDrawArrays(GL_TRIANGLES, 0, 36);
+		}
 		
 		glfwSwapBuffers(window);//백버퍼를 모니터에 출력
 		glfwPollEvents();//트리거된 이벤트(키보드 인풋이나 마우스 인풋 등)가 있는지 확인
