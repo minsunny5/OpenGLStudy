@@ -12,13 +12,30 @@ using namespace std;
 
 void framebuffer_size_callback(GLFWwindow* window, int w, int h);
 void processInput(GLFWwindow* window);
+void mouse_callback(GLFWwindow* window, double xpos, double ypos);
+void scroll_callback(GLFWwindow* window, double xoffset, double yoffset);
 
 // settings
 const unsigned int SCR_WIDTH = 800;
 const unsigned int SCR_HEIGHT = 600;
 
-//global
-glm::vec3 cameraPos = glm::vec3(0.0f, 0.0f, -0.3f);
+// ---------------------------------
+// Global
+// -----------------------------------
+//Camera
+glm::vec3 cameraPos = glm::vec3(0.0f, 0.0f, 3.0f);
+glm::vec3 cameraFront = glm::vec3(0.0f, 0.0f, -1.0f);
+glm::vec3 cameraUp = glm::vec3(0.0f, 1.0f, 0.0f);
+
+float lastX = 400.0f, lastY = 300.0f;
+bool firstMouse = true;
+float pitch = 0.0f;
+float yaw = -90.0f;
+float fov = 45.0f;
+
+//Timing
+float deltaTime = 0.0f;	// Time between current frame and last frame
+float lastFrame = 0.0f; // Time of last frame
 
 int main()
 {
@@ -42,6 +59,10 @@ int main()
 	glfwMakeContextCurrent(window);
 	//유저가 창크기를 바꿀 때마다 이 콜백함수가 불리게 하기 위해 등록
 	glfwSetFramebufferSizeCallback(window, framebuffer_size_callback);
+	//유저가 커서를 움직일 때마다 이 콜백함수가 불리도록 등록
+	glfwSetCursorPosCallback(window, mouse_callback);
+	//유저가 스크롤을 움직일 때마다 이 콜백함수가 불리도록 등록
+	glfwSetScrollCallback(window, scroll_callback);
 
 	//Initialize glad
 	if (!gladLoadGLLoader((GLADloadproc)glfwGetProcAddress))
@@ -201,9 +222,15 @@ int main()
 	glm::vec3(-1.3f,  1.0f, -1.5f)
 	};
 
+
 	//Render Loop (루프 한번 = 하나의 프레임)
 	while (!glfwWindowShouldClose(window))
 	{
+		//delta time calculation
+		float currentFrame = glfwGetTime();
+		deltaTime = currentFrame - lastFrame;
+		lastFrame = currentFrame;
+
 		//keyboard input check
 		processInput(window);
 
@@ -222,11 +249,11 @@ int main()
 		ourShader.use();
 
 		//Transformation
-		glm::mat4 view = glm::mat4(1.0f);
-		view = glm::translate(view, cameraPos);
+		glm::mat4 view;
+		view = glm::lookAt(cameraPos, cameraPos + cameraFront, cameraUp);
 
 		glm::mat4 projection = glm::mat4(1.0f);
-		projection = glm::perspective(glm::radians(45.0f), (float)SCR_WIDTH / (float)SCR_HEIGHT, 0.1f, 100.0f);
+		projection = glm::perspective(glm::radians(fov), (float)SCR_WIDTH / (float)SCR_HEIGHT, 0.1f, 100.0f);
 
 		unsigned int viewLoc = glGetUniformLocation(ourShader.ID, "view");
 		glUniformMatrix4fv(viewLoc, 1, GL_FALSE, glm::value_ptr(view));
@@ -240,10 +267,6 @@ int main()
 			glm::mat4 model = glm::mat4(1.0f);//먼저 초기화
 			model = glm::translate(model, cubePositions[i]);
 			float angle = 20.0f * i;
-			if (i % 3 == 0)//0,3,6,9번째 큐브만 시간에 따라 돌아간다.
-			{
-				angle = glfwGetTime() * 20.0f;
-			}
 			model = glm::rotate(model, glm::radians(angle), glm::vec3(1.0f, 0.3f, 0.5f));
 			ourShader.setMat4("model", model);
 
@@ -270,8 +293,60 @@ void framebuffer_size_callback(GLFWwindow* window, int w, int h)
 	glViewport(0, 0, w, h);
 }
 
+//유저가 마우스 위치를 받아오기 위한 콜백함수
+//마우스 커서가 움직이면 이 함수가 불린다.
+void mouse_callback(GLFWwindow* window, double xpos, double ypos)
+{
+	if (firstMouse) // initially set to true
+	{
+		lastX = xpos;
+		lastY = ypos;
+		firstMouse = false;
+	}
+
+	float xoffset = xpos - lastX;
+	float yoffset = lastY - ypos; // 마우스가 가리키는 y 좌표가 아래에서 위로 올라갈 때 yoffset이 증가되어야 하는데 원래 스크린 y좌표는 아래에서 위로 갈때 감소하기 때문에 reverse해줌.
+	cout << ypos << endl;
+	lastX = xpos;
+	lastY = ypos;
+
+	const float sensitivity = 0.1f;
+	xoffset *= sensitivity;
+	yoffset *= sensitivity;
+
+	yaw += xoffset;
+	pitch += yoffset;
+
+	//constraints
+	if (pitch > 89.0f)
+	{
+		pitch = 89.0f;
+	}
+	if (pitch < -89.0f)
+	{
+		pitch = -89.0f;
+	}
+
+	glm::vec3 direction;
+	direction.x = cos(glm::radians(yaw)) * cos(glm::radians(pitch));
+	direction.y = sin(glm::radians(pitch));
+	direction.z = sin(glm::radians(yaw)) * cos(glm::radians(pitch));
+	cameraFront = glm::normalize(direction);
+}
+
+void scroll_callback(GLFWwindow* window, double xoffset, double yoffset)
+{
+	fov -= (float)yoffset;
+	if (fov < 1.0f)
+		fov = 1.0f;
+	if (fov > 45.0f)
+		fov = 45.0f;
+}
+
+
 void processInput(GLFWwindow* window)
 {
+	const float cameraSpeed = 2.5f * deltaTime;
 	if (glfwGetKey(window, GLFW_KEY_ESCAPE) == GLFW_PRESS)//esc키가 눌렸다면
 	{
 		glfwSetWindowShouldClose(window, true);
@@ -279,22 +354,22 @@ void processInput(GLFWwindow* window)
 
 	if (glfwGetKey(window, GLFW_KEY_UP) == GLFW_PRESS)//up키가 눌렸다면
 	{
-		cameraPos += glm::vec3(0.0f, 0.0f, 0.3f);
+		cameraPos += cameraSpeed * cameraFront;//-z방향으로 이동
 	}
 
 	if (glfwGetKey(window, GLFW_KEY_DOWN) == GLFW_PRESS)//down키가 눌렸다면
 	{
-		cameraPos += glm::vec3(0.0f, 0.0f, -0.3f);
+		cameraPos -= cameraSpeed * cameraFront;
 	}
 
 	if (glfwGetKey(window, GLFW_KEY_RIGHT) == GLFW_PRESS)//오른쪽 방향키가 눌렸다면
 	{
-		cameraPos += glm::vec3(-0.3f, 0.0f, 0.0f);
+		cameraPos += glm::normalize(glm::cross(cameraFront, cameraUp)) * cameraSpeed;
 	}
 
 	if (glfwGetKey(window, GLFW_KEY_LEFT) == GLFW_PRESS)//왼쪽 방향키가 눌렸다면
 	{
-		cameraPos += glm::vec3(0.3f, 0.0f, 0.0f);
+		cameraPos -= glm::normalize(glm::cross(cameraFront, cameraUp)) * cameraSpeed;
 	}
 	
 }

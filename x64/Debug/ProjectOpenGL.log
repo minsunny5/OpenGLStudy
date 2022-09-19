@@ -1,3 +1,9 @@
 ﻿  Start.cpp
-D:\OpenGLStudy\ProjectOpenGL\Start.cpp(245,27): warning C4244: '=': 'double'에서 'float'(으)로 변환하면서 데이터가 손실될 수 있습니다.
+D:\OpenGLStudy\ProjectOpenGL\Start.cpp(230,22): warning C4244: '초기화 중': 'double'에서 'float'(으)로 변환하면서 데이터가 손실될 수 있습니다.
+D:\OpenGLStudy\ProjectOpenGL\Start.cpp(302,11): warning C4244: '=': 'double'에서 'float'(으)로 변환하면서 데이터가 손실될 수 있습니다.
+D:\OpenGLStudy\ProjectOpenGL\Start.cpp(303,11): warning C4244: '=': 'double'에서 'float'(으)로 변환하면서 데이터가 손실될 수 있습니다.
+D:\OpenGLStudy\ProjectOpenGL\Start.cpp(307,16): warning C4244: '초기화 중': 'double'에서 'float'(으)로 변환하면서 데이터가 손실될 수 있습니다.
+D:\OpenGLStudy\ProjectOpenGL\Start.cpp(308,16): warning C4244: '초기화 중': 'double'에서 'float'(으)로 변환하면서 데이터가 손실될 수 있습니다.
+D:\OpenGLStudy\ProjectOpenGL\Start.cpp(310,10): warning C4244: '=': 'double'에서 'float'(으)로 변환하면서 데이터가 손실될 수 있습니다.
+D:\OpenGLStudy\ProjectOpenGL\Start.cpp(311,10): warning C4244: '=': 'double'에서 'float'(으)로 변환하면서 데이터가 손실될 수 있습니다.
   ProjectOpenGL.vcxproj -> D:\OpenGLStudy\ProjectOpenGL\x64\Debug\ProjectOpenGL.exe
