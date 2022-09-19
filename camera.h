@@ -70,11 +70,12 @@ public:
     void ProcessKeyboard(Camera_Movement direction, float deltaTime)
     {
         float velocity = MovementSpeed * deltaTime;
-        //glm::vec3 fpsFront(Front.x, 0, Front.z);
+        glm::vec3 fpsFront(Front.x, 0, Front.z);//카메라의 y축 '이동'만 막을 것이기 때문에 y component만 0으로 바꿔준다.
+
         if (direction == FORWARD)
-            Position += Front * velocity;
+            Position += fpsFront * velocity;
         if (direction == BACKWARD)
-            Position -= Front * velocity;
+            Position -= fpsFront * velocity;
         if (direction == LEFT)
             Position -= Right * velocity;
         if (direction == RIGHT)
