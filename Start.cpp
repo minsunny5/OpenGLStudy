@@ -17,6 +17,8 @@ void processInput(GLFWwindow* window);
 const unsigned int SCR_WIDTH = 800;
 const unsigned int SCR_HEIGHT = 600;
 
+//global
+glm::vec3 cameraPos = glm::vec3(0.0f, 0.0f, -0.3f);
 
 int main()
 {
@@ -198,7 +200,7 @@ int main()
 	glm::vec3(1.5f,  0.2f, -1.5f),
 	glm::vec3(-1.3f,  1.0f, -1.5f)
 	};
-	
+
 	//Render Loop (루프 한번 = 하나의 프레임)
 	while (!glfwWindowShouldClose(window))
 	{
@@ -221,7 +223,7 @@ int main()
 
 		//Transformation
 		glm::mat4 view = glm::mat4(1.0f);
-		view = glm::translate(view, glm::vec3(0.0f, 0.0f, -3.0f));
+		view = glm::translate(view, cameraPos);
 
 		glm::mat4 projection = glm::mat4(1.0f);
 		projection = glm::perspective(glm::radians(45.0f), (float)SCR_WIDTH / (float)SCR_HEIGHT, 0.1f, 100.0f);
@@ -237,7 +239,7 @@ int main()
 		{
 			glm::mat4 model = glm::mat4(1.0f);//먼저 초기화
 			model = glm::translate(model, cubePositions[i]);
-			float angle = 20.0f * i * glfwGetTime();
+			float angle = 20.0f * i;
 			model = glm::rotate(model, glm::radians(angle), glm::vec3(1.0f, 0.3f, 0.5f));
 			ourShader.setMat4("model", model);
 
@@ -270,4 +272,25 @@ void processInput(GLFWwindow* window)
 	{
 		glfwSetWindowShouldClose(window, true);
 	}
+
+	if (glfwGetKey(window, GLFW_KEY_UP) == GLFW_PRESS)//up키가 눌렸다면
+	{
+		cameraPos += glm::vec3(0.0f, 0.0f, 0.3f);
+	}
+
+	if (glfwGetKey(window, GLFW_KEY_DOWN) == GLFW_PRESS)//down키가 눌렸다면
+	{
+		cameraPos += glm::vec3(0.0f, 0.0f, -0.3f);
+	}
+
+	if (glfwGetKey(window, GLFW_KEY_RIGHT) == GLFW_PRESS)//오른쪽 방향키가 눌렸다면
+	{
+		cameraPos += glm::vec3(-0.3f, 0.0f, 0.0f);
+	}
+
+	if (glfwGetKey(window, GLFW_KEY_LEFT) == GLFW_PRESS)//왼쪽 방향키가 눌렸다면
+	{
+		cameraPos += glm::vec3(0.3f, 0.0f, 0.0f);
+	}
+	
 }
