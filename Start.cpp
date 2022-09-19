@@ -240,6 +240,10 @@ int main()
 			glm::mat4 model = glm::mat4(1.0f);//먼저 초기화
 			model = glm::translate(model, cubePositions[i]);
 			float angle = 20.0f * i;
+			if (i % 3 == 0)//0,3,6,9번째 큐브만 시간에 따라 돌아간다.
+			{
+				angle = glfwGetTime() * 20.0f;
+			}
 			model = glm::rotate(model, glm::radians(angle), glm::vec3(1.0f, 0.3f, 0.5f));
 			ourShader.setMat4("model", model);
 
