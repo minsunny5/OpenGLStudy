@@ -197,10 +197,10 @@ int main()
 		
 		//Lighting Src Shader Setting
 		lightSrcShader.use();
-		const float radius = 2.0f;
+		/*const float radius = 2.0f;
 		float lightX = cos(glfwGetTime()) * radius;
 		float lightZ = sin(glfwGetTime()) * radius;
-		lightPos = glm::vec3(lightX, 0.0f, lightZ);
+		lightPos = glm::vec3(lightX, 0.0f, lightZ);*/
 
 		lightSrcShader.setMat4("view", view);
 		lightSrcShader.setMat4("projection", projection);
