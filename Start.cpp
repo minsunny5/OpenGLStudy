@@ -34,9 +34,6 @@ bool firstMouse = true;
 float deltaTime = 0.0f;	// Time between current frame and last frame
 float lastFrame = 0.0f; // Time of last frame
 
-//Lighting
-glm::vec3 lightPos(1.2f, 1.0f, 2.0f);
-
 int main()
 {
 	//Initialize glfw
@@ -135,6 +132,18 @@ int main()
 		-0.5f,  0.5f,  0.5f,  0.0f,  1.0f,  0.0f,  0.0f, 0.0f,
 		-0.5f,  0.5f, -0.5f,  0.0f,  1.0f,  0.0f,  0.0f, 1.0f
 	};
+	glm::vec3 cubePositions[] = {
+			glm::vec3(0.0f,  0.0f,  0.0f),
+			glm::vec3(2.0f,  5.0f, -15.0f),
+			glm::vec3(-1.5f, -2.2f, -2.5f),
+			glm::vec3(-3.8f, -2.0f, -12.3f),
+			glm::vec3(2.4f, -0.4f, -3.5f),
+			glm::vec3(-1.7f,  3.0f, -7.5f),
+			glm::vec3(1.3f, -2.0f, -2.5f),
+			glm::vec3(1.5f,  2.0f, -2.5f),
+			glm::vec3(1.5f,  0.2f, -1.5f),
+			glm::vec3(-1.3f,  1.0f, -1.5f)
+	};
 
 	unsigned int VBO, cubeVAO;
 	glGenVertexArrays(1, &cubeVAO);
@@ -168,12 +177,10 @@ int main()
 	// -----------------------------------------------------------------------------
 	unsigned int diffuseMap = loadTexture("container2.png");
 	unsigned int specularMap = loadTexture("container2_specular.png");
-	unsigned int emissionMap = loadTexture("matrix.jpg");
 
 	objShader.use();
 	objShader.setInt("material.diffuse", 0);
 	objShader.setInt("material.specular", 1);
-	objShader.setInt("material.emission", 2);
 
 
 	//Render Loop (루프 한번 = 하나의 프레임)
@@ -194,11 +201,12 @@ int main()
 		//render
 		//cube object Shader setting
 		objShader.use(); // don't forget to activate/use the shader before setting uniforms!
-		objShader.setVec3("light.position", lightPos);
+		//objShader.setVec3("light.position", lightPos);
+		objShader.setVec3("light.direction", -0.2f, -1.0f, -0.3f);//light dir from the light src
 		objShader.setVec3("viewPos", camera.Position);
 
 		//material properties
-		objShader.setFloat("material.shininess", 64.0f);
+		objShader.setFloat("material.shininess", 32.0f);
 
 		//light properties
 		
@@ -211,12 +219,13 @@ int main()
 		glm::vec3 diffuseColor = lightColor * glm::vec3(0.5f);
 		glm::vec3 ambientColor = diffuseColor * glm::vec3(0.2f);*/
 
-		//objShader.setVec3("light.direction", -0.2f, -1.0f, -0.3f);//light dir from the light src
+		
 		objShader.setVec3("light.ambient", 0.2f, 0.2f, 0.2f);
 		objShader.setVec3("light.diffuse", 0.5f, 0.5f, 0.5f);
 		objShader.setVec3("light.specular", 1.0f, 1.0f, 1.0f);
 
 		//Transformation
+		
 		glm::mat4 view = camera.GetViewMatrix();
 		glm::mat4 projection = glm::perspective(glm::radians(camera.Zoom), (float)SCR_WIDTH / (float)SCR_HEIGHT, 0.1f, 100.0f);
 		objShader.setMat4("view", view);
@@ -232,32 +241,38 @@ int main()
 		glActiveTexture(GL_TEXTURE1);
 		glBindTexture(GL_TEXTURE_2D, specularMap);
 
-		//bind emission map
-		glActiveTexture(GL_TEXTURE2);
-		glBindTexture(GL_TEXTURE_2D, emissionMap);
-
-		////Render Cube Obj
 		glBindVertexArray(cubeVAO);
-		glDrawArrays(GL_TRIANGLES, 0, 36);
+		for (unsigned int i = 0; i < 10; i++)
+		{
+			glm::mat4 model = glm::mat4(1.0f);
+			model = glm::translate(model, cubePositions[i]);
+			float angle = 20.0f * i;
+			model = glm::rotate(model, glm::radians(angle), glm::vec3(1.0f, 0.3f, 0.5f));
+			objShader.setMat4("model", model);
+
+			glDrawArrays(GL_TRIANGLES, 0, 36);
+		}
+
+		
 		
 		//Lighting Src Shader Setting
-		lightSrcShader.use();
-		const float radius = 2.0f;
-		float lightX = cos(glfwGetTime()) * radius;
-		float lightZ = sin(glfwGetTime()) * radius;
-		lightPos = glm::vec3(lightX, 0.0f, lightZ);
+		//lightSrcShader.use();
+		///*const float radius = 2.0f;
+		//float lightX = cos(glfwGetTime()) * radius;
+		//float lightZ = sin(glfwGetTime()) * radius;
+		//lightPos = glm::vec3(lightX, 0.0f, lightZ);*/
 
-		lightSrcShader.setMat4("view", view);
-		lightSrcShader.setMat4("projection", projection);
-		model = glm::mat4(1.0f);
-		model = glm::translate(model, lightPos);
-		model = glm::scale(model, glm::vec3(0.2f));
-		lightSrcShader.setMat4("model", model);
-		lightSrcShader.setVec3("lightColor", glm::vec3(1.0f, 1.0f, 1.0f));
+		//lightSrcShader.setMat4("view", view);
+		//lightSrcShader.setMat4("projection", projection);
+		//glm::mat4 model = glm::mat4(1.0f);
+		//model = glm::translate(model, lightPos);
+		//model = glm::scale(model, glm::vec3(0.2f));
+		//lightSrcShader.setMat4("model", model);
+		//lightSrcShader.setVec3("lightColor", glm::vec3(1.0f, 1.0f, 1.0f));
 
-		//Render Lighting Src
-		glBindVertexArray(lightVAO);
-		glDrawArrays(GL_TRIANGLES, 0, 36);
+		////Render Lighting Src
+		//glBindVertexArray(lightVAO);
+		//glDrawArrays(GL_TRIANGLES, 0, 36);
 
 		
 		glfwSwapBuffers(window);//백버퍼를 모니터에 출력
