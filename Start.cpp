@@ -34,6 +34,9 @@ bool firstMouse = true;
 float deltaTime = 0.0f;	// Time between current frame and last frame
 float lastFrame = 0.0f; // Time of last frame
 
+//lighting
+//glm::vec3 lightPos(1.2f, 1.0f, 2.0f);
+
 int main()
 {
 	//Initialize glfw
@@ -144,7 +147,12 @@ int main()
 			glm::vec3(1.5f,  0.2f, -1.5f),
 			glm::vec3(-1.3f,  1.0f, -1.5f)
 	};
-
+	glm::vec3 pointLightPositions[] = {
+		glm::vec3(0.7f,  0.2f,  2.0f),
+		glm::vec3(2.3f, -3.3f, -4.0f),
+		glm::vec3(-4.0f,  2.0f, -12.0f),
+		glm::vec3(0.0f,  0.0f, -3.0f)
+	};
 	unsigned int VBO, cubeVAO;
 	glGenVertexArrays(1, &cubeVAO);
 	glGenBuffers(1, &VBO);
@@ -195,37 +203,50 @@ int main()
 		processInput(window);
 
 		//Rendering commands..
-		glClearColor(0.1f, 0.1f, 0.1f, 1.0f);//버퍼 리셋할 때는 이 컬러로 바꾼다.(state-setting function)
+		glClearColor(0.1f, 0.1f, 0.1f, 1.0f);//Background Color(state-setting function)
 		glClear(GL_COLOR_BUFFER_BIT | GL_DEPTH_BUFFER_BIT);//depth buffer를 쓸거니까 depth버퍼도 리셋해준다.
 
 		//render
 		//cube object Shader setting
 		objShader.use(); // don't forget to activate/use the shader before setting uniforms!
-		//objShader.setVec3("light.position", lightPos);
-		objShader.setVec3("light.direction", -0.2f, -1.0f, -0.3f);//light dir from the light src
 		objShader.setVec3("viewPos", camera.Position);
-
-		//material properties
 		objShader.setFloat("material.shininess", 32.0f);
 
-		//light properties
-		
-		//if you want to change light color via time
-		/*glm::vec3 lightColor;
-		lightColor.x = sin(glfwGetTime() * 2.0f);
-		lightColor.y = sin(glfwGetTime() * 0.7f);
-		lightColor.z = sin(glfwGetTime() * 1.3f);
+		const float radius = 2.0f;
+		float lightX = cos(glfwGetTime()) * radius;
+		float lightZ = sin(glfwGetTime()) * radius;
+		glm::vec3 lightColor = glm::vec3(lightX, 0.0f, lightZ);
+		//dirlight
+		objShader.setVec3("dirLight.direction", -0.2f, -1.0f, -0.3f);
+		objShader.setVec3("dirLight.ambient", 0.05f, 0.05f, 0.05f);
+		objShader.setVec3("dirLight.diffuse", 0.4f, 0.4f, 0.4f);
+		objShader.setVec3("dirLight.specular", 0.5f, 0.5f, 0.5f);
 
-		glm::vec3 diffuseColor = lightColor * glm::vec3(0.5f);
-		glm::vec3 ambientColor = diffuseColor * glm::vec3(0.2f);*/
-
+		//pointlight
+		for (int i = 0; i < 4; i++)
+		{
+			objShader.setVec3("pointLights[" + to_string(i) + "].position", pointLightPositions[i]);
+			objShader.setVec3("pointLights[" + to_string(i) + "].ambient", 0.05f, 0.05f, 0.05f);
+			objShader.setVec3("pointLights[" + to_string(i) + "].diffuse", lightColor * 0.8f);
+			objShader.setVec3("pointLights[" + to_string(i) + "].specular", 1.0f, 1.0f, 1.0f);
+			objShader.setFloat("pointLights[" + to_string(i) + "].constant", 1.0f);
+			objShader.setFloat("pointLights[" + to_string(i) + "].linear", 0.09f);
+			objShader.setFloat("pointLights[" + to_string(i) + "].quadratic", 0.032f);
+		}
 		
-		objShader.setVec3("light.ambient", 0.2f, 0.2f, 0.2f);
-		objShader.setVec3("light.diffuse", 0.5f, 0.5f, 0.5f);
-		objShader.setVec3("light.specular", 1.0f, 1.0f, 1.0f);
+		//spotlight
+		objShader.setVec3("spotLight.position", camera.Position);
+		objShader.setVec3("spotLight.direction", camera.Front);
+		objShader.setFloat("spotLight.innerCutOff", glm::cos(glm::radians(12.5f)));
+		objShader.setFloat("spotLight.outerCutOff", glm::cos(glm::radians(15.0f)));
+		objShader.setVec3("spotLight.ambient", 0.0f, 0.0f, 0.0f);
+		objShader.setVec3("spotLight.diffuse", 1.0f, 1.0f, 1.0f);
+		objShader.setVec3("spotLight.specular", 1.0f, 1.0f, 1.0f);
+		objShader.setFloat("spotLight.constant", 1.0f);
+		objShader.setFloat("spotLight.linear", 0.09f);
+		objShader.setFloat("spotLight.quadratic", 0.032f);
 
 		//Transformation
-		
 		glm::mat4 view = camera.GetViewMatrix();
 		glm::mat4 projection = glm::perspective(glm::radians(camera.Zoom), (float)SCR_WIDTH / (float)SCR_HEIGHT, 0.1f, 100.0f);
 		objShader.setMat4("view", view);
@@ -241,6 +262,7 @@ int main()
 		glActiveTexture(GL_TEXTURE1);
 		glBindTexture(GL_TEXTURE_2D, specularMap);
 
+		//render containers
 		glBindVertexArray(cubeVAO);
 		for (unsigned int i = 0; i < 10; i++)
 		{
@@ -256,25 +278,23 @@ int main()
 		
 		
 		//Lighting Src Shader Setting
-		//lightSrcShader.use();
-		///*const float radius = 2.0f;
-		//float lightX = cos(glfwGetTime()) * radius;
-		//float lightZ = sin(glfwGetTime()) * radius;
-		//lightPos = glm::vec3(lightX, 0.0f, lightZ);*/
+		lightSrcShader.use();
+		lightSrcShader.setMat4("view", view);
+		lightSrcShader.setMat4("projection", projection);
+		lightSrcShader.setVec3("lightColor", lightColor);
 
-		//lightSrcShader.setMat4("view", view);
-		//lightSrcShader.setMat4("projection", projection);
-		//glm::mat4 model = glm::mat4(1.0f);
-		//model = glm::translate(model, lightPos);
-		//model = glm::scale(model, glm::vec3(0.2f));
-		//lightSrcShader.setMat4("model", model);
-		//lightSrcShader.setVec3("lightColor", glm::vec3(1.0f, 1.0f, 1.0f));
-
-		////Render Lighting Src
-		//glBindVertexArray(lightVAO);
-		//glDrawArrays(GL_TRIANGLES, 0, 36);
-
+		//Render Lighting Src
+		glBindVertexArray(lightVAO);
+		for (unsigned int i = 0; i < 4; i++)
+		{
+			model = glm::mat4(1.0f);
+			model = glm::translate(model, pointLightPositions[i]);
+			model = glm::scale(model, glm::vec3(0.2f));
+			lightSrcShader.setMat4("model", model);
+			glDrawArrays(GL_TRIANGLES, 0, 36);
+		}
 		
+
 		glfwSwapBuffers(window);//백버퍼를 모니터에 출력
 		glfwPollEvents();//트리거된 이벤트(키보드 인풋이나 마우스 인풋 등)가 있는지 확인
 	}
