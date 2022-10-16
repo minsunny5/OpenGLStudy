@@ -1,6 +1,6 @@
 #include <glad/glad.h>
 #include <GLFW/glfw3.h>
-#include "stb_image.h"
+
 #include <glm/glm.hpp>
 #include <glm/gtc/matrix_transform.hpp>
 #include <glm/gtc/type_ptr.hpp>
@@ -9,6 +9,7 @@
 
 #include "shader.h"
 #include "camera.h"
+#include "model.h"
 using namespace std;
 
 void framebuffer_size_callback(GLFWwindow* window, int w, int h);
@@ -26,7 +27,6 @@ const unsigned int SCR_HEIGHT = 600;
 // -----------------------------------
 //Camera
 Camera camera(glm::vec3(0.0f, 0.0f, 3.0f));
-
 float lastX = 400.0f, lastY = 300.0f;
 bool firstMouse = true;
 
@@ -71,6 +71,8 @@ int main()
 		return -1;
 	}
 
+	// tell stb_image.h to flip loaded texture's on the y-axis (before loading model).
+	stbi_set_flip_vertically_on_load(true);
 
 	// ------------------------------------
 	//depth testing on
@@ -82,114 +84,17 @@ int main()
 	// build and compile our shader program
 	// ------------------------------------
 	Shader objShader("color.vs", "color.fs");
-	Shader lightSrcShader("lighting.vs", "lighting.fs");
+
+	// load models
+	// -----------
+	Model ourModel("backpack/backpack.obj");
 
 
 	//ViewPort setting (1st,2nd) arguments means lower left corner of the window. (-1 to 1) 
 	glViewport(0, 0, 800, 600);
 
-	// ------------------------------------------------------------------
-	// set up vertex data (and buffer(s)) and configure vertex attributes
-	// ------------------------------------------------------------------
-	float vertices[] = {
-		// positions          // normals           // texture coords
-		-0.5f, -0.5f, -0.5f,  0.0f,  0.0f, -1.0f,  0.0f, 0.0f,
-		 0.5f, -0.5f, -0.5f,  0.0f,  0.0f, -1.0f,  1.0f, 0.0f,
-		 0.5f,  0.5f, -0.5f,  0.0f,  0.0f, -1.0f,  1.0f, 1.0f,
-		 0.5f,  0.5f, -0.5f,  0.0f,  0.0f, -1.0f,  1.0f, 1.0f,
-		-0.5f,  0.5f, -0.5f,  0.0f,  0.0f, -1.0f,  0.0f, 1.0f,
-		-0.5f, -0.5f, -0.5f,  0.0f,  0.0f, -1.0f,  0.0f, 0.0f,
-
-		-0.5f, -0.5f,  0.5f,  0.0f,  0.0f, 1.0f,   0.0f, 0.0f,
-		 0.5f, -0.5f,  0.5f,  0.0f,  0.0f, 1.0f,   1.0f, 0.0f,
-		 0.5f,  0.5f,  0.5f,  0.0f,  0.0f, 1.0f,   1.0f, 1.0f,
-		 0.5f,  0.5f,  0.5f,  0.0f,  0.0f, 1.0f,   1.0f, 1.0f,
-		-0.5f,  0.5f,  0.5f,  0.0f,  0.0f, 1.0f,   0.0f, 1.0f,
-		-0.5f, -0.5f,  0.5f,  0.0f,  0.0f, 1.0f,   0.0f, 0.0f,
-
-		-0.5f,  0.5f,  0.5f, -1.0f,  0.0f,  0.0f,  1.0f, 0.0f,
-		-0.5f,  0.5f, -0.5f, -1.0f,  0.0f,  0.0f,  1.0f, 1.0f,
-		-0.5f, -0.5f, -0.5f, -1.0f,  0.0f,  0.0f,  0.0f, 1.0f,
-		-0.5f, -0.5f, -0.5f, -1.0f,  0.0f,  0.0f,  0.0f, 1.0f,
-		-0.5f, -0.5f,  0.5f, -1.0f,  0.0f,  0.0f,  0.0f, 0.0f,
-		-0.5f,  0.5f,  0.5f, -1.0f,  0.0f,  0.0f,  1.0f, 0.0f,
-
-		 0.5f,  0.5f,  0.5f,  1.0f,  0.0f,  0.0f,  1.0f, 0.0f,
-		 0.5f,  0.5f, -0.5f,  1.0f,  0.0f,  0.0f,  1.0f, 1.0f,
-		 0.5f, -0.5f, -0.5f,  1.0f,  0.0f,  0.0f,  0.0f, 1.0f,
-		 0.5f, -0.5f, -0.5f,  1.0f,  0.0f,  0.0f,  0.0f, 1.0f,
-		 0.5f, -0.5f,  0.5f,  1.0f,  0.0f,  0.0f,  0.0f, 0.0f,
-		 0.5f,  0.5f,  0.5f,  1.0f,  0.0f,  0.0f,  1.0f, 0.0f,
-
-		-0.5f, -0.5f, -0.5f,  0.0f, -1.0f,  0.0f,  0.0f, 1.0f,
-		 0.5f, -0.5f, -0.5f,  0.0f, -1.0f,  0.0f,  1.0f, 1.0f,
-		 0.5f, -0.5f,  0.5f,  0.0f, -1.0f,  0.0f,  1.0f, 0.0f,
-		 0.5f, -0.5f,  0.5f,  0.0f, -1.0f,  0.0f,  1.0f, 0.0f,
-		-0.5f, -0.5f,  0.5f,  0.0f, -1.0f,  0.0f,  0.0f, 0.0f,
-		-0.5f, -0.5f, -0.5f,  0.0f, -1.0f,  0.0f,  0.0f, 1.0f,
-
-		-0.5f,  0.5f, -0.5f,  0.0f,  1.0f,  0.0f,  0.0f, 1.0f,
-		 0.5f,  0.5f, -0.5f,  0.0f,  1.0f,  0.0f,  1.0f, 1.0f,
-		 0.5f,  0.5f,  0.5f,  0.0f,  1.0f,  0.0f,  1.0f, 0.0f,
-		 0.5f,  0.5f,  0.5f,  0.0f,  1.0f,  0.0f,  1.0f, 0.0f,
-		-0.5f,  0.5f,  0.5f,  0.0f,  1.0f,  0.0f,  0.0f, 0.0f,
-		-0.5f,  0.5f, -0.5f,  0.0f,  1.0f,  0.0f,  0.0f, 1.0f
-	};
-	glm::vec3 cubePositions[] = {
-			glm::vec3(0.0f,  0.0f,  0.0f),
-			glm::vec3(2.0f,  5.0f, -15.0f),
-			glm::vec3(-1.5f, -2.2f, -2.5f),
-			glm::vec3(-3.8f, -2.0f, -12.3f),
-			glm::vec3(2.4f, -0.4f, -3.5f),
-			glm::vec3(-1.7f,  3.0f, -7.5f),
-			glm::vec3(1.3f, -2.0f, -2.5f),
-			glm::vec3(1.5f,  2.0f, -2.5f),
-			glm::vec3(1.5f,  0.2f, -1.5f),
-			glm::vec3(-1.3f,  1.0f, -1.5f)
-	};
-	glm::vec3 pointLightPositions[] = {
-		glm::vec3(0.7f,  0.2f,  2.0f),
-		glm::vec3(2.3f, -3.3f, -4.0f),
-		glm::vec3(-4.0f,  2.0f, -12.0f),
-		glm::vec3(0.0f,  0.0f, -3.0f)
-	};
-	unsigned int VBO, cubeVAO;
-	glGenVertexArrays(1, &cubeVAO);
-	glGenBuffers(1, &VBO);
-
-	glBindBuffer(GL_ARRAY_BUFFER, VBO);
-	glBufferData(GL_ARRAY_BUFFER, sizeof(vertices), vertices, GL_STATIC_DRAW);
-
-	glBindVertexArray(cubeVAO);
-	// position attribute
-	glVertexAttribPointer(0, 3, GL_FLOAT, GL_FALSE, 8 * sizeof(float), (void*)0);
-	glEnableVertexAttribArray(0);
-	// normal attribute
-	glVertexAttribPointer(1, 3, GL_FLOAT, GL_FALSE, 8 * sizeof(float), (void*)(3 * sizeof(float)));
-	glEnableVertexAttribArray(1);
-	//texture attribute
-	glVertexAttribPointer(2, 2, GL_FLOAT, GL_FALSE, 8 * sizeof(float), (void*)(6 * sizeof(float)));
-	glEnableVertexAttribArray(2);
-
-	//light VAO, 위의 VAO를 똑같이 써도 되지만 큐브를 많이 수정할 것이라서 따로 만든다.
-	unsigned int lightVAO;
-	glGenVertexArrays(1, &lightVAO);
-	glBindVertexArray(lightVAO);
-	glBindBuffer(GL_ARRAY_BUFFER, VBO);//Vertex Buffer는 그대로 쓴다.
-
-	//attribute setting
-	glVertexAttribPointer(0, 3, GL_FLOAT, GL_FALSE, 8 * sizeof(float), (void*)0);
-	glEnableVertexAttribArray(0);
-
-	// load textures (we now use a utility function to keep the code more organized)
-	// -----------------------------------------------------------------------------
-	unsigned int diffuseMap = loadTexture("container2.png");
-	unsigned int specularMap = loadTexture("container2_specular.png");
-
-	objShader.use();
-	objShader.setInt("material.diffuse", 0);
-	objShader.setInt("material.specular", 1);
-
+	// draw in wireframe
+	//glPolygonMode(GL_FRONT_AND_BACK, GL_LINE);
 
 	//Render Loop (루프 한번 = 하나의 프레임)
 	while (!glfwWindowShouldClose(window))
@@ -209,42 +114,6 @@ int main()
 		//render
 		//cube object Shader setting
 		objShader.use(); // don't forget to activate/use the shader before setting uniforms!
-		objShader.setVec3("viewPos", camera.Position);
-		objShader.setFloat("material.shininess", 32.0f);
-
-		const float radius = 2.0f;
-		float lightX = cos(glfwGetTime()) * radius;
-		float lightZ = sin(glfwGetTime()) * radius;
-		glm::vec3 lightColor = glm::vec3(lightX, 0.0f, lightZ);
-		//dirlight
-		objShader.setVec3("dirLight.direction", -0.2f, -1.0f, -0.3f);
-		objShader.setVec3("dirLight.ambient", 0.05f, 0.05f, 0.05f);
-		objShader.setVec3("dirLight.diffuse", 0.4f, 0.4f, 0.4f);
-		objShader.setVec3("dirLight.specular", 0.5f, 0.5f, 0.5f);
-
-		//pointlight
-		for (int i = 0; i < 4; i++)
-		{
-			objShader.setVec3("pointLights[" + to_string(i) + "].position", pointLightPositions[i]);
-			objShader.setVec3("pointLights[" + to_string(i) + "].ambient", 0.05f, 0.05f, 0.05f);
-			objShader.setVec3("pointLights[" + to_string(i) + "].diffuse", lightColor * 0.8f);
-			objShader.setVec3("pointLights[" + to_string(i) + "].specular", 1.0f, 1.0f, 1.0f);
-			objShader.setFloat("pointLights[" + to_string(i) + "].constant", 1.0f);
-			objShader.setFloat("pointLights[" + to_string(i) + "].linear", 0.09f);
-			objShader.setFloat("pointLights[" + to_string(i) + "].quadratic", 0.032f);
-		}
-		
-		//spotlight
-		objShader.setVec3("spotLight.position", camera.Position);
-		objShader.setVec3("spotLight.direction", camera.Front);
-		objShader.setFloat("spotLight.innerCutOff", glm::cos(glm::radians(12.5f)));
-		objShader.setFloat("spotLight.outerCutOff", glm::cos(glm::radians(15.0f)));
-		objShader.setVec3("spotLight.ambient", 0.0f, 0.0f, 0.0f);
-		objShader.setVec3("spotLight.diffuse", 1.0f, 1.0f, 1.0f);
-		objShader.setVec3("spotLight.specular", 1.0f, 1.0f, 1.0f);
-		objShader.setFloat("spotLight.constant", 1.0f);
-		objShader.setFloat("spotLight.linear", 0.09f);
-		objShader.setFloat("spotLight.quadratic", 0.032f);
 
 		//Transformation
 		glm::mat4 view = camera.GetViewMatrix();
@@ -252,57 +121,15 @@ int main()
 		objShader.setMat4("view", view);
 		objShader.setMat4("projection", projection);
 		glm::mat4 model = glm::mat4(1.0f);
+		model = glm::translate(model, glm::vec3(0.0f, 0.0f, 0.0f)); // translate it down so it's at the center of the scene
+		model = glm::scale(model, glm::vec3(1.0f, 1.0f, 1.0f));	// it's a bit too big for our scene, so scale it down
 		objShader.setMat4("model", model);
-
-		//bind diffuse map
-		glActiveTexture(GL_TEXTURE0);
-		glBindTexture(GL_TEXTURE_2D, diffuseMap);
-
-		//bind specular map
-		glActiveTexture(GL_TEXTURE1);
-		glBindTexture(GL_TEXTURE_2D, specularMap);
-
-		//render containers
-		glBindVertexArray(cubeVAO);
-		for (unsigned int i = 0; i < 10; i++)
-		{
-			glm::mat4 model = glm::mat4(1.0f);
-			model = glm::translate(model, cubePositions[i]);
-			float angle = 20.0f * i;
-			model = glm::rotate(model, glm::radians(angle), glm::vec3(1.0f, 0.3f, 0.5f));
-			objShader.setMat4("model", model);
-
-			glDrawArrays(GL_TRIANGLES, 0, 36);
-		}
-
+		ourModel.Draw(objShader);
 		
-		
-		//Lighting Src Shader Setting
-		lightSrcShader.use();
-		lightSrcShader.setMat4("view", view);
-		lightSrcShader.setMat4("projection", projection);
-		lightSrcShader.setVec3("lightColor", lightColor);
-
-		//Render Lighting Src
-		glBindVertexArray(lightVAO);
-		for (unsigned int i = 0; i < 4; i++)
-		{
-			model = glm::mat4(1.0f);
-			model = glm::translate(model, pointLightPositions[i]);
-			model = glm::scale(model, glm::vec3(0.2f));
-			lightSrcShader.setMat4("model", model);
-			glDrawArrays(GL_TRIANGLES, 0, 36);
-		}
-		
-
 		glfwSwapBuffers(window);//백버퍼를 모니터에 출력
 		glfwPollEvents();//트리거된 이벤트(키보드 인풋이나 마우스 인풋 등)가 있는지 확인
 	}
 
-	//메모리 해제
-	glDeleteVertexArrays(1, &cubeVAO);
-	glDeleteVertexArrays(1, &lightVAO);
-	glDeleteBuffers(1, &VBO);
 	//glfw 리소스 메모리 해제
 	glfwTerminate();
 
