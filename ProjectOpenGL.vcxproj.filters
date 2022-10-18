@@ -55,5 +55,8 @@
     <None Include="lighting.fs">
       <Filter>소스 파일</Filter>
     </None>
+    <None Include="boundary.fs">
+      <Filter>소스 파일</Filter>
+    </None>
   </ItemGroup>
 </Project>

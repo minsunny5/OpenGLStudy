@@ -83,11 +83,15 @@ int main()
 	// ------------------------------------
 	glEnable(GL_DEPTH_TEST);
 	glDepthFunc(GL_LESS);
+	glEnable(GL_STENCIL_TEST);
+	glStencilFunc(GL_NOTEQUAL, 1, 0xFF);
+	glStencilOp(GL_KEEP, GL_KEEP, GL_REPLACE);
 
 	// ------------------------------------
 	// build and compile our shader program
 	// ------------------------------------
 	Shader objShader("color.vs", "color.fs");
+	Shader boundaryShader("color.vs", "boundary.fs");
 
 	// load models
 	// -----------
@@ -201,18 +205,34 @@ int main()
 
 		//Rendering commands..
 		glClearColor(0.1f, 0.1f, 0.1f, 1.0f);//Background Color(state-setting function)
-		glClear(GL_COLOR_BUFFER_BIT | GL_DEPTH_BUFFER_BIT);//depth buffer를 쓸거니까 depth버퍼도 리셋해준다.
+		glClear(GL_COLOR_BUFFER_BIT | GL_DEPTH_BUFFER_BIT | GL_STENCIL_BUFFER_BIT);//stencil buffer를 쓸거니까 스텐실 버퍼도 리셋해준다.
 
 		//render
-		//cube object Shader setting
-		objShader.use(); // don't forget to activate/use the shader before setting uniforms!
-
 		//Transformation
 		glm::mat4 model = glm::mat4(1.0f);
 		glm::mat4 view = camera.GetViewMatrix();
 		glm::mat4 projection = glm::perspective(glm::radians(camera.Zoom), (float)SCR_WIDTH / (float)SCR_HEIGHT, 0.1f, 100.0f);
+		//Shader setting
+		boundaryShader.use();
+		boundaryShader.setMat4("view", view);
+		boundaryShader.setMat4("projection", projection);
+
+		objShader.use(); // don't forget to activate/use the shader before setting uniforms!
 		objShader.setMat4("view", view);
 		objShader.setMat4("projection", projection);
+
+		//floor
+		glStencilMask(0x00);//floor는 노말하게 그릴거니까 스텐실 버퍼에 쓰지 않는다.
+		glBindVertexArray(planeVAO);
+		glBindTexture(GL_TEXTURE_2D, floorTexture);
+		objShader.setMat4("model", glm::mat4(1.0f));
+		glDrawArrays(GL_TRIANGLES, 0, 6);
+		glBindVertexArray(0);
+
+		// 1st. render pass, draw objects as normal, writing to the stencil buffer
+		// --------------------------------------------------------------------
+		glStencilFunc(GL_ALWAYS, 1, 0xFF);
+		glStencilMask(0xFF);//스텐실 버퍼에 쓰자.
 		//cubes
 		glBindVertexArray(cubeVAO);
 		glActiveTexture(GL_TEXTURE0);
@@ -226,12 +246,34 @@ int main()
 		objShader.setMat4("model", model);
 		glDrawArrays(GL_TRIANGLES, 0, 36);
 
-		//floor
-		glBindVertexArray(planeVAO);
-		glBindTexture(GL_TEXTURE_2D, floorTexture);
-		objShader.setMat4("model", glm::mat4(1.0f));
-		glDrawArrays(GL_TRIANGLES, 0, 6);
+		// 2nd. render pass: 바운더리 그리기 now draw slightly scaled versions of the objects, this time disabling stencil writing.
+		// Because the stencil buffer is now filled with several 1s. The parts of the buffer that are 1 are not drawn, thus only drawing 
+		// the objects' size differences, making it look like borders.
+		// -----------------------------------------------------------------------------------------------------------------------------
+		glStencilFunc(GL_NOTEQUAL, 1, 0xFF);//이제 1이 아닌부분만 출력할 것이다.
+		glStencilMask(0x00);//더이상 스텐실 버퍼를 편집할 수 없게 막아놓고
+		glDisable(GL_DEPTH_TEST);//바운더리는 깊이에 상관없어야 하므로 비활성화한다.
+		boundaryShader.use();
+		float scale = 1.1f;
+		//cubes
+		glBindVertexArray(cubeVAO);
+		glBindTexture(GL_TEXTURE_2D, cubeTexture);
+		model = glm::mat4(1.0f);
+		model = glm::translate(model, glm::vec3(-1.0f, 0.0f, -1.0f));
+		model = glm::scale(model, glm::vec3(scale, scale, scale));
+		boundaryShader.setMat4("model", model);
+		glDrawArrays(GL_TRIANGLES, 0, 36);
+
+		model = glm::mat4(1.0f);
+		model = glm::translate(model, glm::vec3(2.0f, 0.0f, 0.0f));
+		model = glm::scale(model, glm::vec3(scale, scale, scale));
+		objShader.setMat4("model", model);
+		glDrawArrays(GL_TRIANGLES, 0, 36);
+		//초기화
 		glBindVertexArray(0);
+		glStencilMask(0xFF);
+		glStencilFunc(GL_ALWAYS, 0, 0xFF);
+		glEnable(GL_DEPTH_TEST);
 		
 		glfwSwapBuffers(window);//백버퍼를 모니터에 출력
 		glfwPollEvents();//트리거된 이벤트(키보드 인풋이나 마우스 인풋 등)가 있는지 확인

@@ -154,6 +154,7 @@
     <ClInclude Include="stb_image.h" />
   </ItemGroup>
   <ItemGroup>
+    <None Include="boundary.fs" />
     <None Include="lighting.fs" />
     <None Include="lighting.vs" />
     <None Include="color.fs" />
