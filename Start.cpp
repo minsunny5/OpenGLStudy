@@ -82,6 +82,8 @@ int main()
 	//depth testing on
 	// ------------------------------------
 	glEnable(GL_DEPTH_TEST);
+	glEnable(GL_BLEND);
+	glBlendFunc(GL_SRC_ALPHA, GL_ONE_MINUS_SRC_ALPHA);
 
 	// ------------------------------------
 	// build and compile our shader program
@@ -157,12 +159,14 @@ int main()
 		1.0f,  0.5f,  0.0f,  1.0f,  0.0f
 	};
 
-	vector<glm::vec3> vegetation;
-	vegetation.push_back(glm::vec3(-1.5f, 0.0f, -0.48f));
-	vegetation.push_back(glm::vec3(1.5f, 0.0f, 0.51f));
-	vegetation.push_back(glm::vec3(0.0f, 0.0f, 0.7f));
-	vegetation.push_back(glm::vec3(-0.3f, 0.0f, -2.3f));
-	vegetation.push_back(glm::vec3(0.5f, 0.0f, -0.6f));
+	vector<glm::vec3> windows
+	{
+		glm::vec3(-1.5f, 0.0f, -0.48f),
+		glm::vec3(1.5f, 0.0f, 0.51f),
+		glm::vec3(0.0f, 0.0f, 0.7f),
+		glm::vec3(-0.3f, 0.0f, -2.3f),
+		glm::vec3(0.5f, 0.0f, -0.6f)
+	};
 
 	// cube VAO
 	unsigned int cubeVAO, cubeVBO;
@@ -206,8 +210,7 @@ int main()
 	// -------------
 	unsigned int cubeTexture = loadTexture("marble.jpg");
 	unsigned int floorTexture = loadTexture("metal.png");
-	unsigned int grassTexture = loadTexture("grass.png");
-
+	unsigned int grassTexture = loadTexture("blending_transparent_window.png");
 
 	//ViewPort setting (1st,2nd) arguments means lower left corner of the window. (-1 to 1) 
 	//glViewport(0, 0, 800, 600);
@@ -228,6 +231,14 @@ int main()
 
 		//keyboard input check
 		processInput(window);
+
+		//alpha sorting
+		std::map<float, glm::vec3> sorted;//카메라기준 가까운 것부터 먼것까지 sorting된다.
+		for (unsigned int i = 0; i < windows.size(); i++)
+		{
+			float distance = glm::length(camera.Position - windows[i]);
+			sorted[distance] = windows[i];
+		}
 
 		//Rendering commands..
 		glClearColor(0.1f, 0.1f, 0.1f, 1.0f);//Background Color(state-setting function)
@@ -263,17 +274,16 @@ int main()
 		objShader.setMat4("model", model);
 		glDrawArrays(GL_TRIANGLES, 0, 36);
 
-		//grass
+		//windows
 		glBindVertexArray(grassVAO);
 		glBindTexture(GL_TEXTURE_2D, grassTexture);
-		for (unsigned int i = 0; i < vegetation.size(); i++)
+		for (std::map<float, glm::vec3>::reverse_iterator it = sorted.rbegin(); it != sorted.rend(); ++it)
 		{
 			model = glm::mat4(1.0f);
-			model = glm::translate(model, vegetation[i]);
+			model = glm::translate(model, it->second);
 			objShader.setMat4("model", model);
 			glDrawArrays(GL_TRIANGLES, 0, 6);
-		}
-		
+		}		
 		
 		glfwSwapBuffers(window);//백버퍼를 모니터에 출력
 		glfwPollEvents();//트리거된 이벤트(키보드 인풋이나 마우스 인풋 등)가 있는지 확인
