@@ -58,5 +58,11 @@
     <None Include="boundary.fs">
       <Filter>소스 파일</Filter>
     </None>
+    <None Include="framebuffers_screen.fs">
+      <Filter>소스 파일</Filter>
+    </None>
+    <None Include="framebuffers_screen.vs">
+      <Filter>소스 파일</Filter>
+    </None>
   </ItemGroup>
 </Project>
